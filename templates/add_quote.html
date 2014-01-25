@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>add quote</title>
+		<link href='http://fonts.googleapis.com/css?family=Indie+Flower' rel='stylesheet' type='text/css'>
+		<style type="text/css">
+			body {
+				font-family: 'Indie Flower', cursive;
+				background: black;
+			}
+			
+			form {
+				display: block;
+				position:absolute;
+				left: 10px;
+				top: 25px;
+				right: 10px;
+				bottom: 25px;
+			}
+			
+			textarea {
+				font-size: 72px;
+				font-family: 'Indie Flower', cursive;
+				text-align:center;
+				position:absolute;
+				top: 0px;
+				width: 100%;
+				bottom: 75px;
+			}
+			
+			form input[type="submit"] {
+				display:block;
+				position:absolute;
+				height: 40px;
+				width: 100%;
+				bottom: 25px;
+			}
+		</style>
+	</head>
+	<body>
+		<form action="/add/post" method="post">
+			<textarea name="content" rows="3" cols="60"></textarea>
+			<input type="submit" value="Submit"/>
+		</form>
+	</body>
+</html>
