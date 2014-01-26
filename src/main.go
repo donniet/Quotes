@@ -96,6 +96,11 @@ func add_quote_handler(w http.ResponseWriter, r *http.Request) {
 func add_quote_post_handler(w http.ResponseWriter, r *http.Request) {
 	quote := r.FormValue("content")
 	
+	if quote == "" || r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	
 	c := appengine.NewContext(r);
 	
 	lq := get_last_quoteid(r);
