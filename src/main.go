@@ -7,6 +7,7 @@ import (
 	
 	"appengine"
 	"appengine/datastore" 
+	"appengine/user"
 	
 	"errors"
 	"time"
@@ -82,6 +83,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func add_quote_handler(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	
+	if !user.IsAdmin(c) {
+		url, err := user.LoginURL(c, r.URL.String())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusFound)
+		return
+	}
+
 	t, err := template.ParseFiles("templates/add_quote.html")
 	
 	if err != nil {
@@ -94,14 +108,19 @@ func add_quote_handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func add_quote_post_handler(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	
+	if !user.IsAdmin(c) {
+		http.Error(w, "Unauthorized Access", http.StatusUnauthorized)
+		return
+	}
+
 	quote := r.FormValue("content")
 	
 	if quote == "" || r.Method != "POST" {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
-	
-	c := appengine.NewContext(r);
 	
 	lq := get_last_quoteid(r);
 	
