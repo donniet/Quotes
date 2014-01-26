@@ -19,9 +19,24 @@
 				overflow: visible;
 				text-align: center;
 			}
+			
+			a.link {
+				color: white;
+				font-size: 25px;
+			}
 		</style>
 	</head>
 	<body>
-		<h2 class="quote">{{. | html}}</h2>
+		<h2 class="quote">{{.Quote | html}}</h2>
+		
+		{{if .IsAdmin}}
+			<ul>
+				<li><a href="add" class="link">Add Quote</a></li>
+				
+				{{if .Forced}}
+					<li><a href="/" class="link">Random</a>
+				{{end}}
+			
+		{{end}}
 	</body>
 </html>

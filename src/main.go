@@ -11,6 +11,8 @@ import (
 	
 	"errors"
 	"time"
+	"fmt"
+	"strconv"
 )
 
 type Quote struct {
@@ -43,21 +45,34 @@ func get_last_quoteid(r *http.Request) int32 {
 }
 
 func get_quote(r *http.Request) (string, error) {
+	c := appengine.NewContext(r)
+	
 	// first get the last quote
 	lq := get_last_quoteid(r)
+	qid := r.FormValue("qid")
 	
 	if lq < 0 {
 		return "Hello!", nil;
 	} else {
-		var qid int32 = 0
+		var qidn int32 = 0
 		
-		if lq > 0 {
-			qid = rand.Int31n(lq+1);
+		if qid != "" && user.IsAdmin(c) {
+			var err error = nil 
+			var pn int64 = 0
+			
+			pn, err = strconv.ParseInt(qid, 10, 32)
+			qidn = int32(pn)
+			
+			if err != nil || qidn < 0 || qidn > lq {
+				qidn = rand.Int31n(lq+1);				
+			}
+		} else if lq > 0 {
+			qidn = rand.Int31n(lq+1);
 		}
 		
 		c := appengine.NewContext(r)
 		
-		q := datastore.NewQuery("Quote").Ancestor(quote_master_key(c)).Filter("QuoteId =", qid)
+		q := datastore.NewQuery("Quote").Ancestor(quote_master_key(c)).Filter("QuoteId =", qidn)
 		quotes := make([]Quote, 0, 1)
 		
 		if _, err := q.GetAll(c, &quotes); err != nil {
@@ -71,14 +86,25 @@ func get_quote(r *http.Request) (string, error) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
 	t, err := template.ParseFiles("templates/home.html")
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		quote, _ := get_quote(r)
+		q, _ := get_quote(r)
 	
-		t.Execute(w, quote)
+		data := struct{
+			Quote string
+			IsAdmin bool
+			Forced bool
+		}{
+			Quote: q,
+			IsAdmin: user.IsAdmin(c),
+			Forced: r.FormValue("qid") != "",
+		}
+	
+		t.Execute(w, data)
 	}
 }
 
@@ -138,5 +164,5 @@ func add_quote_post_handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/?qid=%d", q.QuoteId), http.StatusFound)
 }
