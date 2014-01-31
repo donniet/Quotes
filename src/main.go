@@ -13,6 +13,7 @@ import (
 	"time"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type Quote struct {
@@ -87,6 +88,23 @@ func get_quote(r *http.Request) (string, error) {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
+	
+	u := user.Current(c);
+	url, _ := user.LoginURL(c, "/")
+	
+	
+	if u == nil {
+		w.Header().Set("Location", url);
+		w.WriteHeader(http.StatusFound);
+		return;
+	} else if !user.IsAdmin(c) && strings.ToLower(u.Email) != "laurenek@gmail.com" {
+		t, _ := template.ParseFiles("templates/error.html");
+		
+		t.Execute(w, template.HTML(fmt.Sprintf("Not authorized, <a href=\"%s\">click here</a> to login", url)));
+		w.WriteHeader(http.StatusUnauthorized);
+		return;
+	}
+	
 	t, err := template.ParseFiles("templates/home.html")
 
 	if err != nil {
