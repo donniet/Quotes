@@ -23,9 +23,18 @@ type Quote struct {
 }
 
 func init() {
+	router := &RegexpRequestRouter{}
+	router.HandleRegexFunc("/-/([0-9]+)", handler_with_id)
+	router.HandleFunc("/", handler)
+	router.HandleFunc("/add", add_quote_handler)
+	router.HandleFunc("/add/post", add_quote_post_handler)
+
+	http.Handle("/", router)
+/*
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/add", add_quote_handler)
 	http.HandleFunc("/add/post", add_quote_post_handler)
+*/
 }
 
 func quote_master_key(c appengine.Context) *datastore.Key {
@@ -83,6 +92,63 @@ func get_quote(r *http.Request) (string, error) {
 		} else {
 			return quotes[0].Quote, nil
 		}
+	}
+}
+
+func get_quote_by_id(r *http.Request, qidn int32) (string, error) {
+	c := appengine.NewContext(r)
+	
+	q := datastore.NewQuery("Quote").Ancestor(quote_master_key(c)).Filter("QuoteId =", qidn)
+	quotes := make([]Quote, 0, 1)
+	
+	if _, err := q.GetAll(c, &quotes); err != nil {
+		return "Error", errors.New("Query Error")
+	} else if len(quotes) == 0 {
+		return "Hello!", nil;
+	} else {
+		return quotes[0].Quote, nil
+	}
+}
+
+func handler_with_id(w http.ResponseWriter, r *http.Request, matches []string) {
+	c := appengine.NewContext(r)
+	
+	u := user.Current(c);
+	url, _ := user.LoginURL(c, "/")
+	
+	
+	if u == nil {
+		w.Header().Set("Location", url);
+		w.WriteHeader(http.StatusFound);
+		return;
+	} else if !user.IsAdmin(c) && strings.ToLower(u.Email) != "laurenek@gmail.com" {
+		t, _ := template.ParseFiles("templates/error.html");
+		
+		t.Execute(w, template.HTML(fmt.Sprintf("Not authorized, <a href=\"%s\">click here</a> to login", url)));
+		w.WriteHeader(http.StatusUnauthorized);
+		return;
+	}
+	
+	t, err := template.ParseFiles("templates/home.html")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		qid, _ := strconv.ParseInt(matches[1], 10, 32)
+		
+		q, _ := get_quote_by_id(r, int32(qid))
+	
+		data := struct{
+			Quote string
+			IsAdmin bool
+			Forced bool
+		}{
+			Quote: q,
+			IsAdmin: user.IsAdmin(c),
+			Forced: r.FormValue("qid") != "",
+		}
+	
+		t.Execute(w, data)
 	}
 }
 
